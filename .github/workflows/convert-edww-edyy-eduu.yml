@@ -1,5 +1,8 @@
 name: Build LOA.json from EDWW + EDYY + EDUU TOMLs
 
+permissions:
+  contents: write   # 👈 allow the workflow to push commits
+
 on:
   push:
     branches: [ main ]
