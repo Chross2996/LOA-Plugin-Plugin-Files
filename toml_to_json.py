@@ -3,17 +3,12 @@
 Convert one or more LOA TOML files into a single LOA.json.
 
 Usage examples:
-    # Default (old behavior): use LOA_INPUT.toml → loa_configs_json/LOA.json
     python toml_to_json.py
+    python toml_to_json.py file1.toml file2.toml loa_configs_json/LOA.json
 
-    # Explicit single file:
-    python toml_to_json.py path/to/file.toml loa_configs_json/LOA.json
-
-    # Multiple TOML files merged into one LOA.json:
-    python toml_to_json.py file1.toml file2.toml ... loa_configs_json/LOA.json
-
-Rules:
-- level == 0  OR  no cop defined -> skip that LOA.
+This version includes ALL LOAs:
+- level=0 allowed
+- cop missing allowed
 """
 
 import json
@@ -45,10 +40,9 @@ def convert_one(toml_data: dict) -> dict:
         if not from_sector:
             continue
 
-        ades = agr.get("ades")  # destinations
-        adep = agr.get("adep")  # origins
+        ades = agr.get("ades")
+        adep = agr.get("adep")
 
-        # Determine list type (destination or departure)
         if ades:
             list_name = "destinationLoas"
             field_name = "destinations"
@@ -68,16 +62,13 @@ def convert_one(toml_data: dict) -> dict:
         level = agr.get("level", 0)
         cop   = agr.get("cop")
 
-        # ❌ SKIP IF: level == 0  OR  no cop defined
-        if level == 0 or cop is None or str(cop).strip() == "":
-            continue
-
+        # INCLUDE ALL LOAs — no filtering
         entry = {
             field_name: airports,
             "xfl": level,
             "nextSectors": [to_sector] if to_sector else [],
-            "copText": cop,
-            "waypoints": [cop]
+            "copText": cop if cop else "",
+            "waypoints": [cop] if cop else []
         }
 
         result[from_sector][list_name].append(entry)
@@ -86,10 +77,7 @@ def convert_one(toml_data: dict) -> dict:
 
 
 def merge_results(target: dict, addition: dict) -> None:
-    """
-    Merge 'addition' (from one TOML) into 'target' (global result).
-    Keeps destinationLoas / departureLoas per sector and extends arrays.
-    """
+    """Merge TOML conversion result into main result dict."""
     for sector, sec_cfg in addition.items():
         if sector not in target:
             target[sector] = {}
@@ -102,27 +90,21 @@ def merge_results(target: dict, addition: dict) -> None:
 
 
 def main():
-    # Defaults: old behavior – single LOA_INPUT.toml -> loa_configs_json/LOA.json
-    input_paths: list[Path]
-    output_path: Path
-
+    # Default: LOA_INPUT.toml → loa_configs_json/LOA.json
     if len(sys.argv) == 1:
         input_paths = [Path("LOA_INPUT.toml")]
         output_path = Path("loa_configs_json/LOA.json")
     elif len(sys.argv) == 2:
-        # One arg → input, default output
         input_paths = [Path(sys.argv[1])]
         output_path = Path("loa_configs_json/LOA.json")
     else:
-        # Many args: all except last are TOML input files; last is output JSON
         *toml_args, out = sys.argv[1:]
         input_paths = [Path(p) for p in toml_args]
         output_path = Path(out)
 
-    # Read all TOML files and merge
     global_result: dict[str, dict] = {}
-
     any_found = False
+
     for p in input_paths:
         if not p.exists():
             print(f"WARNING: {p} not found, skipping.")
@@ -135,16 +117,14 @@ def main():
         merge_results(global_result, partial)
 
     if not any_found:
-        print("ERROR: No valid TOML input files found. Nothing to do.")
+        print("ERROR: No TOML input files found.")
         return
 
-    # Make sure target folder exists
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
     print(f"Writing merged LOA JSON to {output_path} ...")
     output_path.write_text(json.dumps(global_result, indent=4, ensure_ascii=False), encoding="utf-8")
 
-    print("Done! ✔ All TOMLs merged into LOA.json")
+    print("Done! ✔ LOA.json generated.")
 
 
 if __name__ == "__main__":
