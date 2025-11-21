@@ -701,32 +701,6 @@
             },
             {
                 "destinations": [
-                    "EDDP"
-                ],
-                "xfl": 170,
-                "nextSectors": [
-                    "TRN"
-                ],
-                "copText": "ADMOS",
-                "waypoints": [
-                    "ADMOS"
-                ]
-            },
-            {
-                "destinations": [
-                    "EDDP"
-                ],
-                "xfl": 170,
-                "nextSectors": [
-                    "HAL"
-                ],
-                "copText": "ABGUS",
-                "waypoints": [
-                    "ABGUS"
-                ]
-            },
-            {
-                "destinations": [
                     "EDAC"
                 ],
                 "xfl": 230,
