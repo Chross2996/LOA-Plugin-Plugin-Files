@@ -1,10 +1,10 @@
-name: Build LOA.json from EDWW + EDYY + EDUU TOMLs
+name: Build LOA.json from VATGER EDWW + EDYY + EDUU TOMLs
 
 permissions:
-  contents: write   # 👈 allow the workflow to push commits
+  contents: write   # Needed if you want workflow to commit LOA.json back to the repo
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: {}   # Manual only — no auto-trigger on pushes
 
 jobs:
   convert:
@@ -16,12 +16,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout TOML source repo (loa-for-LOA-Plugin)
+      - name: Checkout VATGER TOML repo (VATGER-Nav/loa)
         uses: actions/checkout@v4
         with:
-          repository: Chross2996/loa-for-LOA-Plugin
-          ref: LOA-Plugin-EDITS
-          path: loa-for-LOA-Plugin
+          repository: VATGER-Nav/loa
+          ref: main
+          path: vatger-loa
           fetch-depth: 0
 
       - name: Set up Python
@@ -33,14 +33,12 @@ jobs:
         run: |
           pip install toml
 
-      - name: Convert EDWW + EDYY + EDUU TOMLs into loa_configs_json/LOA.json
+      - name: Convert VATGER TOMLs (EDWW + EDYY + EDUU) into loa_configs_json/LOA.json
         run: |
-          # Collect TOMLs from EDWW
-          TOML_EDWW=$(find loa-for-LOA-Plugin/data/EDWW -name '*.toml' -print | sort || true)
-          # Collect TOMLs from EDYY
-          TOML_EDYY=$(find loa-for-LOA-Plugin/data/EDYY -name '*.toml' -print | sort || true)
-          # Collect TOMLs from EDUU
-          TOML_EDUU=$(find loa-for-LOA-Plugin/data/EDUU -name '*.toml' -print | sort || true)
+          # Collect TOMLs from the three directories only
+          TOML_EDWW=$(find vatger-loa/data/EDWW -name '*.toml' -print | sort || true)
+          TOML_EDYY=$(find vatger-loa/data/EDYY -name '*.toml' -print | sort || true)
+          TOML_EDUU=$(find vatger-loa/data/EDUU -name '*.toml' -print | sort || true)
 
           echo "EDWW TOMLs:"
           echo "$TOML_EDWW"
@@ -52,28 +50,25 @@ jobs:
           echo "$TOML_EDUU"
           echo
 
-          # Merge all file lists together
           TOML_FILES="$TOML_EDWW $TOML_EDYY $TOML_EDUU"
 
-          # If everything is empty / whitespace, bail out
           if [ -z "$(echo "$TOML_FILES" | tr -d '[:space:]')" ]; then
-            echo "No TOML files found in EDWW, EDYY, or EDUU."
+            echo "ERROR: No TOML files found in EDWW, EDYY, or EDUU."
             exit 1
           fi
 
-          # Run converter: all TOMLs passed, final arg is output file
+          # Generate the merged LOA.json
           python toml_to_json.py $TOML_FILES loa_configs_json/LOA.json
 
-      - name: Commit LOA.json changes
+      - name: Commit LOA.json changes to main
         if: github.ref == 'refs/heads/main'
         run: |
           if git status --porcelain | grep -q 'loa_configs_json/LOA.json'; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add loa_configs_json/LOA.json
-            git commit -m "Auto-update LOA.json from EDWW+EDYY+EDUU TOMLs"
+            git commit -m "Auto-update LOA.json from VATGER TOMLs (EDWW, EDYY, EDUU)"
             git push
           else
             echo "No changes detected."
           fi
-
